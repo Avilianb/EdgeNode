@@ -36,8 +36,8 @@ func init() {
 
 // ListenerManager 端口监听管理器
 type ListenerManager struct {
-	listenersMap  map[string]*Listener // addr => *Listener
-	http3Listener *HTTPListener
+	listenersMap   map[string]*Listener // addr => *Listener
+	http3Listeners map[int]*HTTP3Listener
 
 	locker     sync.Mutex
 	lastConfig *nodeconfigs.NodeConfig
@@ -55,6 +55,7 @@ type ListenerManager struct {
 func NewListenerManager() *ListenerManager {
 	var manager = &ListenerManager{
 		listenersMap:     map[string]*Listener{},
+		http3Listeners:   map[int]*HTTP3Listener{},
 		retryListenerMap: map[string]*Listener{},
 		ticker:           time.NewTicker(1 * time.Minute),
 		firewalld:        firewalls.NewFirewalld(),
@@ -158,6 +159,8 @@ func (this *ListenerManager) Start(nodeConfig *nodeconfigs.NodeConfig) error {
 		}
 	}
 
+	this.reloadHTTP3Listeners(nodeConfig)
+
 	// 加入到firewalld
 	go this.addToFirewalld(groupAddrs)
 
@@ -174,8 +177,8 @@ func (this *ListenerManager) TotalActiveConnections() int {
 		total += listener.listener.CountActiveConnections()
 	}
 
-	if this.http3Listener != nil {
-		total += this.http3Listener.CountActiveConnections()
+	for _, listener := range this.http3Listeners {
+		total += listener.CountActiveConnections()
 	}
 
 	return total
@@ -238,7 +241,11 @@ func (this *ListenerManager) findProcessNameWithPort(isUdp bool, port string) st
 }
 
 func (this *ListenerManager) addToFirewalld(groupAddrs []string) {
-	if !sharedNodeConfig.AutoOpenPorts {
+	var nodeConfig = sharedNodeConfig
+	if nodeConfig == nil {
+		nodeConfig = this.lastConfig
+	}
+	if nodeConfig == nil || !nodeConfig.AutoOpenPorts {
 		return
 	}
 
@@ -247,7 +254,7 @@ func (this *ListenerManager) addToFirewalld(groupAddrs []string) {
 	}
 
 	// HTTP/3相关端口
-	var http3Ports = sharedNodeConfig.FindHTTP3Ports()
+	var http3Ports = nodeConfig.FindHTTP3Ports()
 	if len(http3Ports) > 0 {
 		for _, port := range http3Ports {
 			var groupAddr = "udp://:" + types.String(port)

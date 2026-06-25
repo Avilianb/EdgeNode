@@ -5,14 +5,15 @@ go 1.22
 replace github.com/TeaOSLab/EdgeCommon => ../EdgeCommon
 
 require (
+	github.com/TeaOSLab/EdgeCommon v0.0.0-00010101000000-000000000000
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/andybalholm/brotli v1.0.5
 	github.com/aws/aws-sdk-go v1.44.279
 	github.com/baidubce/bce-sdk-go v0.9.170
 	github.com/biessek/golang-ico v0.0.0-20180326222316-d348d9ea4670
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/coreos/go-iptables v0.6.0
 	github.com/cockroachdb/pebble v1.1.0
+	github.com/coreos/go-iptables v0.6.0
 	github.com/dchest/captcha v1.0.0
 	github.com/florianl/go-nfqueue v1.3.1
 	github.com/fsnotify/fsnotify v1.7.0
@@ -27,7 +28,7 @@ require (
 	github.com/klauspost/compress v1.17.8
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mdlayher/netlink v1.7.2
-	github.com/miekg/dns v1.1.59
+	github.com/miekg/dns v1.1.61
 	github.com/mssola/useragent v1.0.0
 	github.com/panjf2000/ants/v2 v2.7.5
 	github.com/pires/go-proxyproto v0.6.1
@@ -38,8 +39,8 @@ require (
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.41
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/image v0.16.0
-	golang.org/x/net v0.25.0
-	golang.org/x/sys v0.20.0
+	golang.org/x/net v0.26.0
+	golang.org/x/sys v0.21.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -88,11 +89,11 @@ require (
 	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/mock v0.4.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.21.0 // indirect
+	golang.org/x/tools v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
 )

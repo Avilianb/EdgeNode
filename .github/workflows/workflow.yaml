@@ -1,0 +1,55 @@
+name: community-http3
+
+on:
+  push:
+    branches:
+      - feature/community-http3
+      - codex/**
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DEPENDENCY_OWNER: Avilianb
+  DEPENDENCY_BRANCH: feature/community-http3
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out EdgeNode
+        uses: actions/checkout@v4
+        with:
+          path: EdgeNode
+
+      - name: Check out EdgeCommon dependency
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.DEPENDENCY_OWNER }}/EdgeCommon
+          ref: ${{ env.DEPENDENCY_BRANCH }}
+          path: EdgeCommon
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache: true
+          cache-dependency-path: |
+            EdgeNode/go.sum
+            EdgeCommon/go.sum
+
+      - name: Download modules
+        working-directory: EdgeNode
+        run: go mod download
+
+      - name: Run HTTP/3 tests
+        working-directory: EdgeNode
+        run: go test -tags=community ./internal/nodes -run 'Test(HTTPRequestProcessHTTP3Headers|ListenerManager.*HTTP3|DecodeNodeHTTP3Policies)' -count=1
+
+      - name: Build edge-node
+        working-directory: EdgeNode
+        run: go build -tags=community ./cmd/edge-node
