@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -29,6 +30,33 @@ func TestHTTPRequestProcessHTTP3HeadersAddsAltSvcForEnabledPolicy(t *testing.T) 
 
 	if got := header.Get("Alt-Svc"); got != `h3=":8443"; ma=2592000` {
 		t.Fatalf("Alt-Svc = %q, want HTTP/3 advertisement on configured port", got)
+	}
+}
+
+func TestHTTPRequestIsConnClosedAllowsHTTP3RequestWithoutTCPConn(t *testing.T) {
+	rawReq, err := http.NewRequest(http.MethodGet, "https://www.netr0.me/about/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := &HTTPRequest{RawReq: rawReq}
+
+	if req.isConnClosed() {
+		t.Fatal("isConnClosed() = true, want false for active request without TCP conn context")
+	}
+}
+
+func TestHTTPRequestIsConnClosedHonorsCanceledRequestContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	rawReq, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.netr0.me/about/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := &HTTPRequest{RawReq: rawReq}
+
+	if !req.isConnClosed() {
+		t.Fatal("isConnClosed() = false, want true for canceled request context")
 	}
 }
 

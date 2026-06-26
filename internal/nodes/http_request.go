@@ -2065,9 +2065,16 @@ func (this *HTTPRequest) canIgnore(err error) bool {
 
 // 检查连接是否已关闭
 func (this *HTTPRequest) isConnClosed() bool {
+	if this.RawReq == nil {
+		return true
+	}
+	if this.RawReq.Context().Err() != nil {
+		return true
+	}
+
 	var requestConn = this.RawReq.Context().Value(HTTPConnContextKey)
 	if requestConn == nil {
-		return true
+		return false
 	}
 
 	conn, ok := requestConn.(net.Conn)
@@ -2075,5 +2082,5 @@ func (this *HTTPRequest) isConnClosed() bool {
 		return isClientConnClosed(conn)
 	}
 
-	return true
+	return false
 }
