@@ -40,7 +40,7 @@ func (this *HTTP3Listener) Listen() error {
 	if err != nil {
 		return err
 	}
-	this.packetConn = newHTTP3PacketConn(packetConn)
+	this.packetConn = packetConn
 	this.h3Server = &http3.Server{
 		Addr:      this.addr,
 		Port:      this.port,
@@ -49,7 +49,7 @@ func (this *HTTP3Listener) Listen() error {
 	}
 
 	goman.New(func() {
-		err := this.h3Server.Serve(this.packetConn)
+		err := this.h3Server.Serve(packetConn)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) && !errors.Is(err, net.ErrClosed) {
 			remotelogs.Error("HTTP3_LISTENER", err.Error())
 		}
