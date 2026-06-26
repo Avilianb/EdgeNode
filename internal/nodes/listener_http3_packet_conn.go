@@ -33,6 +33,7 @@ type http3OOBPacketConn struct {
 
 type http3OOBConn interface {
 	net.PacketConn
+	net.Conn
 	SyscallConn() (syscall.RawConn, error)
 	SetReadBuffer(int) error
 	SetWriteBuffer(int) error
@@ -71,6 +72,18 @@ func (this *http3PacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error)
 
 func (this *http3OOBPacketConn) SyscallConn() (syscall.RawConn, error) {
 	return this.conn.SyscallConn()
+}
+
+func (this *http3OOBPacketConn) Read(b []byte) (int, error) {
+	return this.conn.Read(b)
+}
+
+func (this *http3OOBPacketConn) Write(b []byte) (int, error) {
+	return this.conn.Write(b)
+}
+
+func (this *http3OOBPacketConn) RemoteAddr() net.Addr {
+	return this.conn.RemoteAddr()
 }
 
 func (this *http3OOBPacketConn) SetReadBuffer(bytes int) error {
