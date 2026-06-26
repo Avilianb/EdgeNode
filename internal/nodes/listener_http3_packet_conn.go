@@ -6,8 +6,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"golang.org/x/net/ipv4"
 )
 
 const (
@@ -30,8 +28,7 @@ type http3InitialReadState struct {
 
 type http3OOBPacketConn struct {
 	*http3PacketConn
-	conn      http3OOBConn
-	batchConn http3BatchConn
+	conn http3OOBConn
 }
 
 type http3OOBConn interface {
@@ -44,10 +41,6 @@ type http3OOBConn interface {
 	WriteMsgUDP(b, oob []byte, addr *net.UDPAddr) (n, oobn int, err error)
 }
 
-type http3BatchConn interface {
-	ReadBatch([]ipv4.Message, int) (int, error)
-}
-
 func newHTTP3PacketConn(conn net.PacketConn) net.PacketConn {
 	base := &http3PacketConn{
 		PacketConn:   conn,
@@ -57,7 +50,6 @@ func newHTTP3PacketConn(conn net.PacketConn) net.PacketConn {
 		return &http3OOBPacketConn{
 			http3PacketConn: base,
 			conn:            oobConn,
-			batchConn:       ipv4.NewPacketConn(oobConn),
 		}
 	}
 	return base
@@ -108,21 +100,6 @@ func (this *http3OOBPacketConn) ReadMsgUDP(b, oob []byte) (n, oobn, flags int, a
 		this.noteInitialRead(b[:n], addr)
 	}
 	return
-}
-
-func (this *http3OOBPacketConn) ReadBatch(messages []ipv4.Message, flags int) (int, error) {
-	n, err := this.batchConn.ReadBatch(messages, flags)
-	if err != nil {
-		return n, err
-	}
-	for i := 0; i < n; i++ {
-		msg := &messages[i]
-		if len(msg.Buffers) == 0 {
-			continue
-		}
-		this.noteInitialRead(msg.Buffers[0][:msg.N], msg.Addr)
-	}
-	return n, nil
 }
 
 func (this *http3OOBPacketConn) WriteMsgUDP(b, oob []byte, addr *net.UDPAddr) (n, oobn int, err error) {

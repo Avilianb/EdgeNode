@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"net"
 	"testing"
-	"time"
 
 	"golang.org/x/net/ipv4"
 )
@@ -77,97 +76,10 @@ func TestHTTP3PacketConnOOBWrapperSupportsIPv4PacketConn(t *testing.T) {
 	}
 }
 
-func TestHTTP3PacketConnOOBReadBatchSuppressesSmallInitial(t *testing.T) {
-	serverConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer serverConn.Close()
-
-	clientConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer clientConn.Close()
-
-	wrapped, ok := newHTTP3PacketConn(serverConn).(*http3OOBPacketConn)
-	if !ok {
-		t.Fatal("expected UDP conn to use OOB wrapper")
-	}
-
-	readClientInitial := func(packet []byte) *net.UDPAddr {
-		t.Helper()
-
-		if _, err := clientConn.WriteToUDP(paddedInitial(packet), serverConn.LocalAddr().(*net.UDPAddr)); err != nil {
-			t.Fatal(err)
-		}
-		if err := wrapped.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
-			t.Fatal(err)
-		}
-
-		msgs := make([]ipv4.Message, 1)
-		msgs[0].Buffers = [][]byte{make([]byte, 1500)}
-		msgs[0].OOB = make([]byte, 128)
-
-		n, err := wrapped.ReadBatch(msgs, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if n != 1 {
-			t.Fatalf("expected one UDP packet, got %d", n)
-		}
-		addr, ok := msgs[0].Addr.(*net.UDPAddr)
-		if !ok {
-			t.Fatalf("expected UDP addr, got %T", msgs[0].Addr)
-		}
-		return addr
-	}
-
-	addr := readClientInitial(chromeClientInitial1)
-	if _, _, err := wrapped.WriteMsgUDP(serverInitialAck, nil, addr); err != nil {
-		t.Fatal(err)
-	}
-	if err := clientConn.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
-		t.Fatal(err)
-	}
-	buf := make([]byte, 1500)
-	n, _, err := clientConn.ReadFromUDP(buf)
-	if err == nil {
-		t.Fatalf("expected first small Initial to be suppressed, read %d bytes", n)
-	}
-	if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
-		t.Fatalf("expected read timeout after suppressed packet, got %v", err)
-	}
-
-	addr = readClientInitial(chromeClientInitial2)
-	if _, _, err := wrapped.WriteMsgUDP(serverInitialAck, nil, addr); err != nil {
-		t.Fatal(err)
-	}
-	if err := clientConn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
-		t.Fatal(err)
-	}
-	n, _, err = clientConn.ReadFromUDP(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != len(serverInitialAck) {
-		t.Fatalf("expected forwarded server Initial length %d, got %d", len(serverInitialAck), n)
-	}
-}
-
 func newTestHTTP3PacketConn() *http3PacketConn {
 	return &http3PacketConn{
 		initialReads: map[string]*http3InitialReadState{},
 	}
-}
-
-func paddedInitial(packet []byte) []byte {
-	if len(packet) >= 1200 {
-		return packet
-	}
-	padded := make([]byte, 1200)
-	copy(padded, packet)
-	return padded
 }
 
 func mustHex(s string) []byte {
