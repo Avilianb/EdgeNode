@@ -48,7 +48,7 @@ jobs:
 
       - name: Run HTTP/3 tests
         working-directory: EdgeNode
-        run: go test -tags=community ./internal/nodes -run 'Test(HTTPRequestProcessHTTP3Headers|ListenerManager.*HTTP3|DecodeNodeHTTP3Policies)' -count=1
+        run: go test -tags=community ./internal/nodes -run 'Test(HTTPRequestProcessHTTP3Headers|ListenerManager.*HTTP3|DecodeNodeHTTP3Policies|HTTP3PacketConn)' -count=1
 
       - name: Build edge-node
         working-directory: EdgeNode
