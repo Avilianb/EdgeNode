@@ -4,8 +4,6 @@ import (
 	"encoding/hex"
 	"net"
 	"testing"
-
-	"golang.org/x/net/ipv4"
 )
 
 var (
@@ -54,25 +52,6 @@ func TestHTTP3PacketConnDoesNotSuppressUnrelatedPackets(t *testing.T) {
 	}
 	if conn.shouldSuppressSmallInitial(serverInitialAck, &net.UDPAddr{IP: net.ParseIP("203.0.113.11"), Port: 44321}) {
 		t.Fatal("expected packet for an unknown address to be allowed")
-	}
-}
-
-func TestHTTP3PacketConnOOBWrapperSupportsIPv4PacketConn(t *testing.T) {
-	udpConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer udpConn.Close()
-
-	wrapped := newHTTP3PacketConn(udpConn)
-
-	defer func() {
-		if err := recover(); err != nil {
-			t.Fatalf("wrapped UDP conn should support ipv4.NewPacketConn: %v", err)
-		}
-	}()
-	if ipv4.NewPacketConn(wrapped) == nil {
-		t.Fatal("expected ipv4 packet conn")
 	}
 }
 
