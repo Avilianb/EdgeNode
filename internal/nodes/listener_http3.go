@@ -10,6 +10,7 @@ import (
 	"github.com/TeaOSLab/EdgeNode/internal/remotelogs"
 	"github.com/TeaOSLab/EdgeNode/internal/utils/goman"
 	"github.com/iwind/TeaGo/types"
+	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 )
 
@@ -20,6 +21,8 @@ type HTTP3Listener struct {
 	port       int
 	packetConn net.PacketConn
 	h3Server   *http3.Server
+	h3Listener http3.QUICEarlyListener
+	transport  *quic.Transport
 }
 
 func NewHTTP3Listener(port int, group *serverconfigs.ServerAddressGroup) *HTTP3Listener {
@@ -47,9 +50,16 @@ func (this *HTTP3Listener) Listen() error {
 		Handler:   this,
 		TLSConfig: this.buildTLSConfig(),
 	}
+	this.transport = newHTTP3Transport(this.packetConn)
+	h3Listener, err := this.transport.ListenEarly(http3.ConfigureTLSConfig(this.h3Server.TLSConfig), newHTTP3QUICConfig())
+	if err != nil {
+		_ = this.packetConn.Close()
+		return err
+	}
+	this.h3Listener = h3Listener
 
 	goman.New(func() {
-		err := this.h3Server.Serve(this.packetConn)
+		err := this.h3Server.ServeListener(this.h3Listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) && !errors.Is(err, net.ErrClosed) {
 			remotelogs.Error("HTTP3_LISTENER", err.Error())
 		}
@@ -61,6 +71,12 @@ func (this *HTTP3Listener) Listen() error {
 func (this *HTTP3Listener) Close() error {
 	if this.h3Server != nil {
 		_ = this.h3Server.Close()
+	}
+	if this.h3Listener != nil {
+		_ = this.h3Listener.Close()
+	}
+	if this.transport != nil {
+		_ = this.transport.Close()
 	}
 	if this.packetConn != nil {
 		return this.packetConn.Close()
@@ -116,6 +132,19 @@ func (this *ListenerManager) reloadHTTP3Listeners(nodeConfig *nodeconfigs.NodeCo
 		}
 		this.http3Listeners[port] = listener
 	}
+}
+
+func newHTTP3Transport(packetConn net.PacketConn) *quic.Transport {
+	return &quic.Transport{
+		Conn: packetConn,
+		VerifySourceAddress: func(net.Addr) bool {
+			return true
+		},
+	}
+}
+
+func newHTTP3QUICConfig() *quic.Config {
+	return &quic.Config{Allow0RTT: true}
 }
 
 func (this *ListenerManager) http3GroupForPort(nodeConfig *nodeconfigs.NodeConfig, port int) *serverconfigs.ServerAddressGroup {
